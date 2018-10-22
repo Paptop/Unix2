@@ -12,6 +12,7 @@ PCall::PCall()
   m_commands.insert({"grep", PC::GREP});
   m_commands.insert({"ps",   PC::PS});
   m_commands.insert({"vim",  PC::VIM});
+  m_commands.insert({"pwd",  PC::PWD});
 }
 
 PCall::~PCall()
@@ -78,6 +79,11 @@ void PCall::CallProcess(Tokens& tokens)
     case PC::GREP:
       {
         Grep(tokens);
+      }
+      break;
+    case PC::PWD:
+      {
+        Pwd(tokens);
       }
       break;
     default:
@@ -225,6 +231,30 @@ void PCall::Cd(Tokens& tokens)
   }
 }
 
+void PCall::Pwd(Tokens& tokens)
+{
+  int status;
+  const char* path = "/bin/pwd"; 
+  tokens[0] = "/bin/pwd";
+
+  char* arg[tokens.size() + 1]; // +1 for NULL
+
+  for(int i = 0 ; i < (int)tokens.size(); ++i)
+  {
+     arg[i] = strdup(tokens[i].c_str());
+  }
+  
+  arg[tokens.size()] = NULL;
+
+  if( fork() == 0)
+  {
+    execv(path, arg);
+  }
+  else
+  {
+    wait(&status);
+  }
+}
 
 
 

@@ -23,6 +23,7 @@ public:
     GREP,
     PS,
     VIM,
+    PWD,
     COUNT
   };
 
@@ -42,6 +43,7 @@ private:
     void Vim(Tokens& tokens);
     void Ps(Tokens& tokens);
     void Grep(Tokens& tokens);
+    void Pwd(Tokens& tokens);
 
 private:
     std::map<std::string, PC> m_commands;
