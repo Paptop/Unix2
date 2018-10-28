@@ -1,260 +1,202 @@
 #include "pcall.h"
 
-#define DEBUG 0 
+#include <stdio.h>
+
+#define DEBUG 0  
 
 PCall::PCall()
 {
-  m_commands.insert({"ls",   PC::LS});
-  m_commands.insert({"cat",  PC::CAT});
-  m_commands.insert({"cd",   PC::CD});
-  m_commands.insert({"sh",   PC::SH});
-  m_commands.insert({"sort", PC::SORT});
-  m_commands.insert({"grep", PC::GREP});
-  m_commands.insert({"ps",   PC::PS});
-  m_commands.insert({"vim",  PC::VIM});
-  m_commands.insert({"pwd",  PC::PWD});
+  m_paths.insert({"ls",   "/bin/ls"});
+  m_paths.insert({"cat",  "/bin/cat"});
+  m_paths.insert({"sh",   "/bin/sh"});
+  m_paths.insert({"echo", "/bin/echo"});
+  m_paths.insert({"grep", "/bin/grep"});
+  m_paths.insert({"ps",   "/bin/ps"});
+  m_paths.insert({"pwd",  "/bin/pwd"});
+  m_paths.insert({"sleep","/bin/sleep"});
+  m_paths.insert({"cd",   "cd"});
+  m_paths.insert({"wc",   "/usr/bin/wc"});
+  m_paths.insert({"sort", "/usr/bin/sort"});
+  m_paths.insert({"vim",  "/usr/bin/vim"});
+  m_paths.insert({"less",  "/usr/bin/less"});
+  m_paths.insert({"tail",  "/usr/bin/less"});
+  m_paths.insert({"head",  "/usr/bin/head"});
 }
 
 PCall::~PCall()
 {
 }
 
+PCall::Tokens& PCall::GetTopCommand()
+{
+  return (*m_commands.begin()); 
+}
+
+PCall::Tokens& PCall::GetTailCommand()
+{
+  return (*std::next(m_commands.begin(),1)); 
+}
+
+void PCall::PopTopCommand()
+{
+  m_commands.pop_front(); 
+}
 
 void PCall::ParseInput(std::string& str)
 {
-  Tokens tokens;
+  m_commands.clear();
   char* input = strdup(str.c_str());
   char* token = nullptr;
   
+  std::vector<std::string> command;
   while( (token = strsep(&input," ")) != NULL)
   {
-      tokens.push_back(token);
+      if(strcmp(token,"|") == 0)
+      {
+        if(command.size() > 0 )
+        {
+            m_commands.push_back(command);
+        }
+        command.clear();
+      }
+      else
+      {
+        command.push_back(token);
+      }
+  }
+
+  if(command.size() > 0)
+  {
+    m_commands.push_back(command);
   }
 
 #if DEBUG
-  for(std::string& token : tokens)
+  int Commands = 0;
+  for(std::vector<std::string>& vec : m_commands)
   {
-    std::cout <<"Tokens : " <<  token << " Str size : " << str.size() <<  std::endl;
+    for(int i = 0; i < (int)vec.size() ; ++i)
+    {
+        std::cout << "Command "<< Commands <<  " Token " << vec[i] << std::endl;
+    }
+    
+    Commands++;
   }
 #endif
-  CallProcess(tokens);
-}
 
-void PCall::CallProcess(Tokens& tokens)
-{
-  auto iter = m_commands.find(tokens[0]);  
-  if(iter == m_commands.end())
-  {
-    std::cout << " No such command" << std::endl;
-    return;
-  }
-
-  switch((*iter).second)
-  {
-    case PC::LS:
-      {
-        Ls(tokens);
-      }
-      break;
-    case PC::CAT:
-      {
-        Cat(tokens);
-      }
-      break;
-    case PC::CD:
-      {
-        Cd(tokens);
-      }
-      break;
-    case PC::PS:
-      {
-        Ps(tokens);
-      }
-      break;
-    case PC::VIM:
-      {
-        Vim(tokens);
-      }
-      break;
-    case PC::GREP:
-      {
-        Grep(tokens);
-      }
-      break;
-    case PC::PWD:
-      {
-        Pwd(tokens);
-      }
-      break;
-    default:
-      std::cout << " Command not implemented " << std::endl;
-  }
-}
-
-void PCall::Ls(Tokens& tokens)
-{
-  const char* path = "/bin/ls"; 
-  tokens[0] = "/bin/ls";
-
-  int status;
-  char* arg[tokens.size() + 1]; // +1 for NULL
-
-  for(int i = 0 ; i < (int)tokens.size(); ++i)
-  {
-     arg[i] = strdup(tokens[i].c_str());
-  }
-  
-  arg[tokens.size()] = NULL;
-
-  if( fork() == 0)
-  {
-    execv(path, arg);
-  }
-  else
-  {
-    wait(&status);
-  }
-}
-
-void PCall::Cat(Tokens& tokens)
-{
-  const char* path = "/bin/cat"; 
-  tokens[0] = "/bin/cat";
-
-  int status;
-  char* arg[tokens.size() + 1]; // +1 for NULL
-
-  for(int i = 0 ; i < (int)tokens.size(); ++i)
-  {
-     arg[i] = strdup(tokens[i].c_str());
-  }
-  
-  arg[tokens.size()] = NULL;
-
-  if( fork() == 0)
-  {
-    execv(path, arg);
-  }
-  else
-  {
-    wait(&status);
-  }
-}
-
-void PCall::Ps(Tokens& tokens)
-{
-  const char* path = "/bin/ps"; 
-  tokens[0] = "/bin/ps";
-
-  int status;
-  char* arg[tokens.size() + 1]; // +1 for NULL
-
-  for(int i = 0 ; i < (int)tokens.size(); ++i)
-  {
-     arg[i] = strdup(tokens[i].c_str());
-  }
-  
-  arg[tokens.size()] = NULL;
-
-  if( fork() == 0)
-  {
-    execv(path, arg);
-  }
-  else
-  {
-    wait(&status);
-  }
-}
-
-void PCall::Vim(Tokens& tokens)
-{
-  int status;
-  const char* path = "/usr/bin/vim"; 
-  tokens[0] = "/usr/bin/vim";
-
-  char* arg[tokens.size() + 1]; // +1 for NULL
-
-  for(int i = 0 ; i < (int)tokens.size(); ++i)
-  {
-     arg[i] = strdup(tokens[i].c_str());
-  }
-  
-  arg[tokens.size()] = NULL;
-
-  if( fork() == 0)
-  {
-    execv(path, arg);
-  }
-  else
-  {
-    wait(&status);
-  }
-}
-
-void PCall::Grep(Tokens& tokens)
-{
-  int status;
-  const char* path = "/bin/grep"; 
-  tokens[0] = "/bin/grep";
-
-  char* arg[tokens.size() + 1]; // +1 for NULL
-
-  for(int i = 0 ; i < (int)tokens.size(); ++i)
-  {
-     arg[i] = strdup(tokens[i].c_str());
-  }
-  
-  arg[tokens.size()] = NULL;
-
-  if( fork() == 0)
-  {
-    execv(path, arg);
-  }
-  else
-  {
-    wait(&status);
-  }
-}
-
-void PCall::Cd(Tokens& tokens)
-{
-  if(tokens.size() > 2 || tokens.size() < 1)
+  if(m_commands.size() == 0)
   {
     return;
   }
 
-  int value = chdir(tokens[1].c_str());
+  LoopPipe();
+}
+
+int PCall::CreateArguments(Tokens& topCommand, char **arg)
+{
+#if DEBUG
+    static int call = 0;
+    call++;
+    for(std::string& tokens : topCommand)
+    {
+        std::cout << "Arguments for command : " << tokens << " call : " << call <<  std::endl;
+    }
+#endif
+  auto iter = m_paths.find(topCommand[0]);
+  if(iter == m_paths.end())
+  {
+      std::cout << "  No such command " << std::endl;
+      return -1;
+  }
+
+  const char* path = iter->second.c_str();
+  topCommand[0] = strdup(path);
+
+  for(int i = 0 ; i < (int)topCommand.size(); ++i)
+  {
+     arg[i] = strdup(topCommand[i].c_str());
+  }
+
+  arg[topCommand.size()] = NULL;
+
+  return 0;
+}
+
+void PCall::RunProc()
+{
+}
+
+void PCall::LoopPipe()
+{
+  int p[2];
+  pid_t pid;
+  int fd_in = 0;
+
+  while(m_commands.size() > 0)
+  {
+      pipe(p);
+      
+      Tokens& topCommand = GetTopCommand(); 
+      char* arg[topCommand.size() + 1]; // +1 for NULL
+      int id0 = CreateArguments(topCommand, arg);
+      if(id0 < 0)
+      {
+        break;
+      }
+
+      if( (pid = fork()) == -1)
+      {
+          exit(EXIT_FAILURE);
+      } 
+      else if (pid == 0)
+      {
+          dup2(fd_in, 0);
+          if(Peek())
+          {
+            dup2(p[1], 1);
+          }
+          close(p[0]);
+          execv(arg[0], arg);
+          exit(EXIT_FAILURE);
+      }
+      else
+      {
+          wait(NULL);
+          close(p[1]);
+          fd_in = p[0];
+          PopTopCommand();
+      }
+  }
+
+}
+
+
+bool PCall::Peek()
+{
+  if (std::next(m_commands.begin(),1) == m_commands.end() )
+  {
+      return false;
+  } 
+  else
+  {
+      return true;
+  }
+}
+
+void PCall::Cd()
+{
+  Tokens& topCommand = GetTopCommand();
+
+  if(topCommand.size() < 1 || topCommand.size() > 2)
+  {
+     return;
+  }
+  
+  int value = chdir(topCommand[1].c_str());
   
   if(value < 0)
   {
     std::cout << "ijsh $ No such directory" << std::endl;
   }
 }
-
-void PCall::Pwd(Tokens& tokens)
-{
-  int status;
-  const char* path = "/bin/pwd"; 
-  tokens[0] = "/bin/pwd";
-
-  char* arg[tokens.size() + 1]; // +1 for NULL
-
-  for(int i = 0 ; i < (int)tokens.size(); ++i)
-  {
-     arg[i] = strdup(tokens[i].c_str());
-  }
-  
-  arg[tokens.size()] = NULL;
-
-  if( fork() == 0)
-  {
-    execv(path, arg);
-  }
-  else
-  {
-    wait(&status);
-  }
-}
-
 
 

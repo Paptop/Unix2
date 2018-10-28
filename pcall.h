@@ -6,45 +6,38 @@
 #include <unistd.h>
 #include <cstring>
 #include <vector>
+#include <algorithm>
 #include <map>
+#include <list>
 
 class PCall
 {
-public:
-
-  enum PC 
-  {
-    LS = 0,
-    CD,
-    CAT,
-    BASH,
-    SH,
-    SORT,
-    GREP,
-    PS,
-    VIM,
-    PWD,
-    COUNT
-  };
-
 public:
     PCall();
     ~PCall();
     void ParseInput(std::string& str); 
 
 private:
-    typedef std::vector<std::string> Tokens;
 
-    void CallProcess(Tokens& tokens);
+public:
+    typedef std::list<std::vector<std::string> > Commands;
+    typedef std::vector<std::string>               Tokens;
 
-    void Ls(Tokens& tokens);
-    void Cd(Tokens& tokens);
-    void Cat(Tokens& tokens);
-    void Vim(Tokens& tokens);
-    void Ps(Tokens& tokens);
-    void Grep(Tokens& tokens);
-    void Pwd(Tokens& tokens);
+    void RunProc();
+    void LoopPipe();
+    void ParseCommands(std::string& input);
+
+    void Cd();
+
+    Tokens& GetTailCommand();
+    Tokens& GetTopCommand();
+    void    PopTopCommand();
+    bool Peek();
+
+    int CreateArguments(Tokens& tokens, char **arg);
+
 
 private:
-    std::map<std::string, PC> m_commands;
+    std::map<std::string, std::string> m_paths;
+    Commands                           m_commands;
 };
