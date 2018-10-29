@@ -136,6 +136,7 @@ void PCall::LoopPipe()
   int p[2];
   pid_t pid;
   int fd_in = 0;
+  FILE* fptr = NULL;
 
   while(m_commands.size() > 0)
   {
@@ -164,11 +165,38 @@ void PCall::LoopPipe()
       } 
       else if (pid == 0)
       {
-          dup2(fd_in, 0);
+          dup2(fd_in, STDIN_FILENO);
+
+          if(Peek(">"))
+          {
+             Tokens& tailCommand = GetTailCommand();
+             if(tailCommand.size() > 0 && tailCommand.size() == 2)
+             {
+                fptr = fopen(tailCommand[1].c_str(),"w");
+                dup2(fileno(fptr), STDOUT_FILENO); 
+                PopTailCommand();
+             }
+          }
+          else if(Peek(">>"))
+          {
+             Tokens& tailCommand = GetTailCommand();
+             if(tailCommand.size() > 0 && tailCommand.size() == 2)
+             {
+                fptr = fopen(tailCommand[1].c_str(),"a");
+                if(!fptr)
+                {
+                  std::cout << "No such file" << std::endl;
+                }
+                dup2(fileno(fptr), STDOUT_FILENO); 
+                PopTailCommand();
+             }
+          }
+
           if(Peek())
           {
-            dup2(p[1], 1);
+            dup2(p[1], STDOUT_FILENO);
           }
+
           close(p[0]);
 
           execv(arg[0], arg);
@@ -178,23 +206,11 @@ void PCall::LoopPipe()
       {
           wait(NULL);
           close(p[1]);
+          if(fptr)
+          {
+            fclose(fptr);
+          }
           fd_in = p[0];
-          if(Peek(">"))
-          {
-             Tokens& tailCommand = GetTailCommand();
-             if(tailCommand.size() > 0 && tailCommand.size() == 2)
-             {
-                FILE *fptr;
-                fptr = fopen(tailCommand[1].c_str(),"w");
-                dup2(p[1],fileno(fptr));
-                fclose(fptr);
-                PopTailCommand();
-             }
-          }
-          else if(Peek(">>"))
-          {
-  
-          }
 
           PopTopCommand();
       }
