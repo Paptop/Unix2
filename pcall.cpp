@@ -18,9 +18,12 @@ PCall::PCall()
   m_paths.insert({"wc",   "/usr/bin/wc"});
   m_paths.insert({"sort", "/usr/bin/sort"});
   m_paths.insert({"vim",  "/usr/bin/vim"});
+  m_paths.insert({"lp",    "/usr/bin/lp"});
   m_paths.insert({"less",  "/usr/bin/less"});
   m_paths.insert({"tail",  "/usr/bin/less"});
   m_paths.insert({"head",  "/usr/bin/head"});
+  m_paths.insert({">",    "write_to_file"});
+  m_paths.insert({">>",   "append_file"});
 }
 
 PCall::~PCall()
@@ -30,11 +33,6 @@ PCall::~PCall()
 PCall::Tokens& PCall::GetTopCommand()
 {
   return (*m_commands.begin()); 
-}
-
-PCall::Tokens& PCall::GetTailCommand()
-{
-  return (*std::next(m_commands.begin(),1)); 
 }
 
 void PCall::PopTopCommand()
@@ -58,6 +56,18 @@ void PCall::ParseInput(std::string& str)
             m_commands.push_back(command);
         }
         command.clear();
+      }
+      else if(strcmp(token, ">") == 0)
+      {
+        m_commands.push_back(command);
+        command.clear();
+        command.push_back(">");
+      }
+      else if(strcmp(token, ">>") == 0)
+      {
+        m_commands.push_back(command);
+        command.clear();
+        command.push_back(">>");
       }
       else
       {
@@ -121,10 +131,6 @@ int PCall::CreateArguments(Tokens& topCommand, char **arg)
   return 0;
 }
 
-void PCall::RunProc()
-{
-}
-
 void PCall::LoopPipe()
 {
   int p[2];
@@ -143,6 +149,15 @@ void PCall::LoopPipe()
         break;
       }
 
+      if(topCommand.size() > 0)
+      {
+        if(strcmp(topCommand[0].c_str(),"cd") == 0)
+        {
+          Cd(); 
+          break;
+        }
+      }
+
       if( (pid = fork()) == -1)
       {
           exit(EXIT_FAILURE);
@@ -155,6 +170,7 @@ void PCall::LoopPipe()
             dup2(p[1], 1);
           }
           close(p[0]);
+
           execv(arg[0], arg);
           exit(EXIT_FAILURE);
       }
@@ -163,6 +179,23 @@ void PCall::LoopPipe()
           wait(NULL);
           close(p[1]);
           fd_in = p[0];
+          if(Peek(">"))
+          {
+             Tokens& tailCommand = GetTailCommand();
+             if(tailCommand.size() > 0 && tailCommand.size() == 2)
+             {
+                FILE *fptr;
+                fptr = fopen(tailCommand[1].c_str(),"w");
+                dup2(p[1],fileno(fptr));
+                fclose(fptr);
+                PopTailCommand();
+             }
+          }
+          else if(Peek(">>"))
+          {
+  
+          }
+
           PopTopCommand();
       }
   }
@@ -180,6 +213,38 @@ bool PCall::Peek()
   {
       return true;
   }
+}
+
+
+bool PCall::Peek(std::string command)
+{
+  if(!Peek())
+  {
+    return false;
+  }
+    
+  auto iter = std::next(m_commands.begin(),1);
+  if(iter->size() > 0)
+  {
+    if(strcmp((*iter)[0].c_str(),command.c_str()) == 0 )
+    { 
+       return true;
+    }
+    return false;
+  }
+  
+  return false;
+}
+
+PCall::Tokens& PCall::GetTailCommand()
+{
+  return (*std::next(m_commands.begin(),1)); 
+}
+
+void PCall::PopTailCommand()
+{
+  auto iter = std::next(m_commands.begin(),1);
+  m_commands.erase(iter);
 }
 
 void PCall::Cd()

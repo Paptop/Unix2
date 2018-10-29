@@ -23,16 +23,16 @@ public:
     typedef std::list<std::vector<std::string> > Commands;
     typedef std::vector<std::string>               Tokens;
 
-    void RunProc();
     void LoopPipe();
     void ParseCommands(std::string& input);
-
     void Cd();
 
-    Tokens& GetTailCommand();
     Tokens& GetTopCommand();
+    Tokens& GetTailCommand();
     void    PopTopCommand();
+    void    PopTailCommand();
     bool Peek();
+    bool Peek(std::string value);
 
     int CreateArguments(Tokens& tokens, char **arg);
 
